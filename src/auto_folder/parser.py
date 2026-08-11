@@ -13,11 +13,11 @@ class Node:
 
 _BRANCH_MARKERS = ("├──", "└──", "+--", "\\--")
 _CODE_FENCE = re.compile(r"^\s*```(?:text|txt|tree|plaintext)?\s*$", re.IGNORECASE)
+_ELLIPSIS_NAMES = {"...", "…"}
 
 
 def _strip_comment(line: str) -> str:
     """Remove common AI-generated comments from a tree entry."""
-    # Markdown tree comments commonly use '# ...' or '- ...' after a path.
     line = re.split(r"\s+#\s*", line, maxsplit=1)[0]
     line = re.split(r"\s+-\s+(?=[^/\\]+$)", line, maxsplit=1)[0]
     return line.rstrip()
@@ -137,7 +137,7 @@ def parse_tree(text: str) -> list[Node]:
 
         is_dir = name.endswith(("/", "\\"))
         name = name.rstrip("/\\")
-        if not name:
+        if not name or name in _ELLIPSIS_NAMES:
             continue
 
         nodes.append(Node(name=name, level=level, is_dir=is_dir))
