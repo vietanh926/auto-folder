@@ -171,11 +171,11 @@ Development-only files such as `tests/`, test dependencies, source files, virtua
 
 The goal is to keep the application small and simple while avoiding unnecessary runtime dependencies.
 
-## Cross-platform roadmap
+## Cross-platform
 
 The core application is intentionally kept platform-independent so the same parser, validator, and creator can be reused across operating systems.
 
-Planned release targets:
+The target release formats are:
 
 ```text
 Auto-Folder
@@ -184,29 +184,7 @@ Auto-Folder
 └── macOS   → auto-folder
 ```
 
-Platform-specific packaging and installation will be handled separately from the core application.
-
-## Roadmap
-
-- [x] Interactive tree input
-- [x] Tree parser
-- [x] Filesystem creator
-- [x] Parser and creator tests
-- [x] Preview before creation
-- [x] Path validation and traversal protection
-- [x] Windows PyInstaller build workflow
-- [ ] Comprehensive AI/Markdown tree compatibility
-- [ ] Dry-run mode
-- [ ] Windows standalone release
-- [ ] Linux standalone release
-- [ ] macOS standalone release
-- [ ] Minimize executable size and runtime dependencies
-- [ ] Windows installer
-- [ ] Linux installation package
-- [ ] macOS installation package
-- [ ] Automatically add `auto-folder` to PATH
-- [ ] Versioned GitHub releases
-- [ ] Release automation for all supported platforms
+Platform-specific packaging and installation are kept separate from the core application.
 
 ## License
 
