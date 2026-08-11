@@ -61,3 +61,32 @@ def test_special_files_and_hidden_files():
 def test_decoration_only_lines_are_ignored():
     nodes = parse_tree("""project/\n│\n│   \n├── app/\n│\n└── main.py\n""")
     assert [n.name for n in nodes] == ["project", "app", "main.py"]
+
+
+def test_folder_comments_with_dash_are_ignored():
+    nodes = parse_tree("""pytorch-template/\n├── base/ - abstract base classes\n│   ├── base_data_loader.py\n│   ├── base_model.py\n│   └── base_trainer.py\n├── model/ # models, losses, and metrics\n└── utils/ - small utility functions\n""")
+    assert [n.name for n in nodes] == [
+        "pytorch-template",
+        "base",
+        "base_data_loader.py",
+        "base_model.py",
+        "base_trainer.py",
+        "model",
+        "utils",
+    ]
+    assert all(nodes[i].is_dir for i in [0, 1, 5, 6])
+
+
+def test_ellipsis_placeholders_are_ignored():
+    nodes = parse_tree("""project/\n├── app/\n│   ├── main.py\n│   └── ...\n├── ...\n└── utils/\n    ├── util.py\n    └── …\n""")
+    assert [n.name for n in nodes] == ["project", "app", "main.py", "utils", "util.py"]
+
+
+def test_ellipsis_variants_alone_are_ignored():
+    nodes = parse_tree("""project/\n...\n│\n├── app/\n└── ...\n""")
+    assert [n.name for n in nodes] == ["project", "app"]
+
+
+def test_filename_containing_ellipsis_is_preserved():
+    nodes = parse_tree("""project/\n├── test...py\n└── data...json\n""")
+    assert [n.name for n in nodes] == ["project", "test...py", "data...json"]
