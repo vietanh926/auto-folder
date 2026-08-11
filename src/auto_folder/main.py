@@ -5,6 +5,7 @@ from pathlib import Path
 from . import __version__
 from .creator import create_structure
 from .parser import parse_tree
+from .validator import validate_nodes
 
 
 def _print_banner() -> None:
@@ -16,6 +17,29 @@ def _print_banner() -> None:
     print("Press ENTER on an empty line when finished.")
     print("Press Ctrl+C to cancel.")
     print()
+
+
+def _print_preview(nodes) -> None:
+    print("\nPreview:")
+    for node in nodes:
+        indent = "    " * node.level
+        icon = "[DIR ]" if node.is_dir else "[FILE]"
+        suffix = "/" if node.is_dir else ""
+        print(f"{indent}{icon} {node.name}{suffix}")
+
+    directories = sum(node.is_dir for node in nodes)
+    files = len(nodes) - directories
+    print(f"\n{directories} folders, {files} files")
+
+
+def _confirm() -> bool:
+    while True:
+        answer = input("\nCreate this structure? [Y/n]: ").strip().lower()
+        if answer in {"", "y", "yes"}:
+            return True
+        if answer in {"n", "no"}:
+            return False
+        print("Please enter Y or N.")
 
 
 def main() -> int:
@@ -41,8 +65,28 @@ def main() -> int:
         print("No valid folders or files found.")
         return 1
 
+    try:
+        validate_nodes(nodes)
+    except ValueError as exc:
+        print(f"\nError: {exc}")
+        return 1
+
+    _print_preview(nodes)
+
+    try:
+        if not _confirm():
+            print("Cancelled. Nothing was changed.")
+            return 0
+    except KeyboardInterrupt:
+        print("\nCancelled. Nothing was changed.")
+        return 130
+
     root = Path.cwd()
-    directories, files = create_structure(nodes, root)
+    try:
+        directories, files = create_structure(nodes, root)
+    except ValueError as exc:
+        print(f"\nError: {exc}")
+        return 1
 
     print("\nCreated:")
     for path in directories:
