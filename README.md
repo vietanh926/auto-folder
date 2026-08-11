@@ -1,6 +1,12 @@
 # auto-folder
 
-Create folders and files from a pasted directory tree.
+A tiny Windows-friendly CLI that creates folders and files from a pasted directory tree.
+
+## Current status
+
+**v0.1.0 — development**
+
+The project currently contains the parser, filesystem creator, interactive CLI, and tests. The next milestone is packaging it as a standalone Windows executable and then creating a Windows installer that adds `auto-folder` to PATH.
 
 ## Development
 
@@ -10,9 +16,11 @@ Requires Python 3.10+.
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e .
+python -m pip install pytest
+pytest
 ```
 
-Then run:
+Run the CLI:
 
 ```powershell
 auto-folder
@@ -39,10 +47,17 @@ order-sync/
 
 Press Enter on an empty line to create it in the current directory.
 
-## Roadmap
+## Product roadmap
 
-- robust Markdown/tree parsing
-- dry-run mode
-- overwrite/skip controls
-- Windows executable
-- Windows installer that adds `auto-folder` to PATH
+- [x] Interactive tree input
+- [x] Parse common tree characters
+- [x] Ignore comments
+- [x] Handle common Markdown artifacts
+- [x] Basic parser/creator tests
+- [ ] Dry-run mode
+- [ ] Safe path validation
+- [ ] Better error messages
+- [ ] Standalone Windows `.exe`
+- [ ] Windows installer
+- [ ] Automatically add command to PATH
+- [ ] Release automation
