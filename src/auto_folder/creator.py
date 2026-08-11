@@ -1,12 +1,16 @@
-"""Create filesystem structures from parsed tree nodes."""
+"""Create filesystem structures from validated parsed tree nodes."""
 
 from pathlib import Path
 
 from .parser import Node
+from .validator import resolve_node_path, validate_nodes
 
 
 def create_structure(nodes: list[Node], root: Path) -> tuple[list[Path], list[Path]]:
-    """Create nodes below root and return (directories, files)."""
+    """Validate and create nodes below root without overwriting files."""
+    root = root.resolve()
+    validate_nodes(nodes)
+
     directories: list[Path] = []
     files: list[Path] = []
     stack: list[tuple[int, Path]] = []
@@ -15,8 +19,8 @@ def create_structure(nodes: list[Node], root: Path) -> tuple[list[Path], list[Pa
         while stack and stack[-1][0] >= node.level:
             stack.pop()
 
-        parent = stack[-1][1] if stack else root
-        path = parent / node.name
+        parents = [item[1] for item in stack]
+        path = resolve_node_path(root, parents, node)
 
         if node.is_dir:
             path.mkdir(parents=True, exist_ok=True)
@@ -24,7 +28,8 @@ def create_structure(nodes: list[Node], root: Path) -> tuple[list[Path], list[Pa
             stack.append((node.level, path))
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.touch(exist_ok=True)
+            if not path.exists():
+                path.touch()
             files.append(path)
 
     return directories, files
