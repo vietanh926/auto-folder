@@ -12,14 +12,14 @@ DefaultDirName={localappdata}\AutoFolder
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-OutputDir=dist
+OutputDir=..\dist
 OutputBaseFilename=auto-folder-setup
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 
 [Files]
-Source: "dist\auto-folder.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\auto-folder.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Auto-Folder"; Filename: "{app}\auto-folder.exe"
