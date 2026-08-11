@@ -24,9 +24,6 @@ Source: "..\dist\auto-folder.exe"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{autoprograms}\Auto-Folder"; Filename: "{app}\auto-folder.exe"
 
-[Run]
-Filename: "{app}\auto-folder.exe"; Parameters: "--version"; Flags: runhidden waituntilterminated skipifdoesntexist
-
 [Code]
 procedure AddToUserPath(const Dir: string);
 var
