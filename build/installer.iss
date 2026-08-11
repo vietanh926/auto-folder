@@ -47,3 +47,21 @@ begin
   if CurStep = ssPostInstall then
     AddToUserPath(ExpandConstant('{app}'));
 end;
+
+procedure CurUninstallStepChanged(UninstallStep: TUninstallStep);
+var
+  CurrentPath: string;
+  Dir: string;
+begin
+  if UninstallStep = usPostUninstall then
+  begin
+    Dir := ExpandConstant('{app}');
+    if RegQueryStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', CurrentPath) then
+    begin
+      StringChangeEx(CurrentPath, ';' + Dir, '', True);
+      StringChangeEx(CurrentPath, Dir + ';', '', True);
+      StringChangeEx(CurrentPath, Dir, '', True);
+      RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', CurrentPath);
+    end;
+  end;
+end;
