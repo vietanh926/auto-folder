@@ -16,7 +16,6 @@ _CODE_FENCE = re.compile(r"^\s*```(?:text|txt|tree|plaintext)?\s*$", re.IGNORECA
 
 
 def _strip_comment(line: str) -> str:
-    """Remove a trailing tree comment without damaging ordinary filenames."""
     return re.split(r"\s+#\s*", line, maxsplit=1)[0].rstrip()
 
 
@@ -34,33 +33,35 @@ def _clean_name(raw: str) -> str:
     if marker_pos is not None:
         line = line[marker_pos + marker_len :]
     else:
-        # Remove an ASCII tree vertical guide when no branch marker exists.
         line = re.sub(r"^\s*[│|](?:\s*[│|])*\s*", "", line)
 
-    line = line.strip().replace("`", "")
-    line = line.replace("\\_", "_")
+    line = line.strip().replace("`", "").replace("\\_", "_")
 
-    # Common AI/Markdown formatting around filenames.
-    if line.startswith("**") and line.endswith("**"):
-        line = line[2:-2].strip()
-    line = re.sub(r"^\*\*(.+)\**$", r"\1", line)
-    line = line.replace("**init**.py", "__init__.py")
+    # AI commonly uses Markdown bold around filenames. Preserve the extension.
+    match = re.fullmatch(r"\*\*(.+?)\*\*(\..+)", line)
+    if match:
+        stem, extension = match.groups()
+        line = stem + extension
+
+    # Some AI output renders __init__.py as **init**.py.
+    if line == "init.py" or line == "init__.py":
+        line = "__init__.py"
 
     return line.strip()
 
 
 def _level(raw: str) -> int:
-    """Infer tree depth from Unicode/ASCII guides or indentation."""
+    """Infer depth from tree guides or plain indentation."""
     marker_positions = [raw.find(m) for m in _TREE_MARKERS if raw.find(m) != -1]
     if marker_positions:
         prefix = raw[: min(marker_positions)]
-    else:
-        prefix = re.match(r"^[\s│|]*", raw).group(0)
+        prefix = prefix.replace("│", " ").replace("|", " ").replace("\t", "    ")
+        # A branch marker itself represents one tree level.
+        return len(prefix) // 4 + 1
 
-    # Standard tree guides occupy four columns. ASCII `|   ` follows the same
-    # convention. For plain indentation, four spaces represent one level.
+    prefix = re.match(r"^[\s│|]*", raw).group(0)
     prefix = prefix.replace("│", " ").replace("|", " ").replace("\t", "    ")
-    return max(0, len(prefix) // 4)
+    return len(prefix) // 4
 
 
 def _is_probable_tree_line(line: str) -> bool:
@@ -76,7 +77,6 @@ def _is_probable_tree_line(line: str) -> bool:
 
 
 def _extract_code_block(text: str) -> str:
-    """Prefer fenced code content when the user pastes an entire AI answer."""
     lines = text.splitlines()
     blocks: list[list[str]] = []
     current: list[str] | None = None
@@ -94,7 +94,6 @@ def _extract_code_block(text: str) -> str:
     if not blocks:
         return text
 
-    # Prefer the fenced block that contains tree markers or multiple entries.
     blocks.sort(
         key=lambda block: sum(any(marker in line for marker in _TREE_MARKERS) for line in block),
         reverse=True,
@@ -103,7 +102,6 @@ def _extract_code_block(text: str) -> str:
 
 
 def _infer_directories(nodes: list[Node]) -> list[Node]:
-    """Infer directory status from children when `/` was omitted."""
     result = list(nodes)
     for index, node in enumerate(result):
         if node.is_dir:
@@ -114,11 +112,7 @@ def _infer_directories(nodes: list[Node]) -> list[Node]:
 
 
 def parse_tree(text: str) -> list[Node]:
-    """Parse common AI-generated project trees into nodes.
-
-    The parser intentionally creates only a structural representation. Safety
-    validation for filesystem paths belongs to the creator layer.
-    """
+    """Parse common AI-generated project trees into nodes."""
     text = _extract_code_block(text)
     nodes: list[Node] = []
 
@@ -133,13 +127,14 @@ def parse_tree(text: str) -> list[Node]:
 
         is_dir = name.endswith(("/", "\\"))
         name = name.rstrip("/\\")
-        if not name:
-            continue
-
-        # Ignore obvious prose accidentally pasted outside a tree.
-        if not _is_probable_tree_line(raw):
+        if not name or not _is_probable_tree_line(raw):
             continue
 
         nodes.append(Node(name=name, level=_level(raw), is_dir=is_dir))
+
+    # Root entries are represented at level 0; tree branches are one level below.
+    for index, node in enumerate(nodes):
+        if index == 0 and node.level > 0:
+            nodes[index] = Node(node.name, 0, node.is_dir)
 
     return _infer_directories(nodes)
