@@ -2,10 +2,10 @@
 
 from pathlib import Path
 
-from . import __version__
-from .creator import create_structure
-from .parser import parse_tree
-from .validator import validate_nodes
+from auto_folder import __version__
+from auto_folder.creator import create_structure
+from auto_folder.parser import parse_tree
+from auto_folder.validator import validate_nodes
 
 
 def _print_banner() -> None:
@@ -60,12 +60,12 @@ def main() -> int:
         print("Cancelled: no structure provided.")
         return 0
 
-    nodes = parse_tree("\n".join(lines))
-    if not nodes:
-        print("No valid folders or files found.")
-        return 1
-
     try:
+        nodes = parse_tree("\n".join(lines))
+        if not nodes:
+            print("No valid folders or files found.")
+            return 1
+
         validate_nodes(nodes)
     except ValueError as exc:
         print(f"\nError: {exc}")
@@ -84,7 +84,7 @@ def main() -> int:
     root = Path.cwd()
     try:
         directories, files = create_structure(nodes, root)
-    except ValueError as exc:
+    except (OSError, ValueError) as exc:
         print(f"\nError: {exc}")
         return 1
 
