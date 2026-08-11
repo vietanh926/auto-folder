@@ -16,7 +16,11 @@ _CODE_FENCE = re.compile(r"^\s*```(?:text|txt|tree|plaintext)?\s*$", re.IGNORECA
 
 
 def _strip_comment(line: str) -> str:
-    return re.split(r"\s+#\s*", line, maxsplit=1)[0].rstrip()
+    """Remove common AI-generated comments from a tree entry."""
+    # Markdown tree comments commonly use '# ...' or '- ...' after a path.
+    line = re.split(r"\s+#\s*", line, maxsplit=1)[0]
+    line = re.split(r"\s+-\s+(?=[^/\\]+$)", line, maxsplit=1)[0]
+    return line.rstrip()
 
 
 def _branch_level(raw: str) -> int | None:
