@@ -11,7 +11,7 @@ class Node:
     is_dir: bool
 
 
-_TREE_MARKERS = ("├──", "└──", "+--", "\\--")
+_BRANCH_MARKERS = ("├──", "└──", "+--", "\\--")
 _CODE_FENCE = re.compile(r"^\s*```(?:text|txt|tree|plaintext)?\s*$", re.IGNORECASE)
 
 
@@ -19,61 +19,58 @@ def _strip_comment(line: str) -> str:
     return re.split(r"\s+#\s*", line, maxsplit=1)[0].rstrip()
 
 
-def _clean_name(raw: str) -> str:
-    line = _strip_comment(raw)
+def _branch_level(raw: str) -> int | None:
+    """Return tree depth for a line containing a branch marker."""
+    positions = [raw.find(marker) for marker in _BRANCH_MARKERS if raw.find(marker) >= 0]
+    if not positions:
+        return None
 
-    marker_pos = None
-    marker_len = 0
-    for marker in _TREE_MARKERS:
-        pos = line.find(marker)
-        if pos != -1 and (marker_pos is None or pos < marker_pos):
-            marker_pos = pos
-            marker_len = len(marker)
-
-    if marker_pos is not None:
-        line = line[marker_pos + marker_len :]
-    else:
-        line = re.sub(r"^\s*[│|](?:\s*[│|])*\s*", "", line)
-
-    line = line.strip().replace("`", "").replace("\\_", "_")
-
-    # AI commonly uses Markdown bold around filenames. Preserve the extension.
-    match = re.fullmatch(r"\*\*(.+?)\*\*(\..+)", line)
-    if match:
-        stem, extension = match.groups()
-        line = stem + extension
-
-    # Some AI output renders __init__.py as **init**.py.
-    if line == "init.py" or line == "init__.py":
-        line = "__init__.py"
-
-    return line.strip()
+    marker_pos = min(positions)
+    prefix = raw[:marker_pos].replace("│", " ").replace("|", " ")
+    prefix = prefix.replace("\t", "    ")
+    return prefix.count(" ") // 4 + 1
 
 
-def _level(raw: str) -> int:
-    """Infer depth from tree guides or plain indentation."""
-    marker_positions = [raw.find(m) for m in _TREE_MARKERS if raw.find(m) != -1]
-    if marker_positions:
-        prefix = raw[: min(marker_positions)]
-        prefix = prefix.replace("│", " ").replace("|", " ").replace("\t", "    ")
-        # A branch marker itself represents one tree level.
-        return len(prefix) // 4 + 1
-
+def _indent_level(raw: str) -> int:
     prefix = re.match(r"^[\s│|]*", raw).group(0)
     prefix = prefix.replace("│", " ").replace("|", " ").replace("\t", "    ")
     return len(prefix) // 4
 
 
-def _is_probable_tree_line(line: str) -> bool:
-    stripped = line.strip()
-    return bool(
-        stripped
-        and (
-            any(marker in line for marker in _TREE_MARKERS)
-            or stripped.endswith(("/", "\\"))
-            or not stripped.startswith(("Here ", "This ", "You ", "The "))
-        )
-    )
+def _clean_name(raw: str) -> str:
+    line = _strip_comment(raw)
+
+    positions = [
+        (line.find(marker), marker)
+        for marker in _BRANCH_MARKERS
+        if line.find(marker) >= 0
+    ]
+    if positions:
+        marker_pos, marker = min(positions, key=lambda item: item[0])
+        line = line[marker_pos + len(marker) :]
+    else:
+        # A plain vertical guide line has no filename.
+        line = re.sub(r"^\s*[│|](?:\s*[│|])*\s*$", "", line)
+
+    line = line.strip()
+
+    # Undo common Markdown escaping produced by AI responses.
+    line = line.replace("\\_", "_")
+
+    # `**init**.py` -> `init.py`, then normalize the conventional Python
+    # package initializer name.
+    match = re.fullmatch(r"\*\*(.+?)\*\*(\..+)", line)
+    if match:
+        line = match.group(1) + match.group(2)
+
+    # Strip simple Markdown code ticks around a filename.
+    if len(line) >= 2 and line.startswith("`") and line.endswith("`"):
+        line = line[1:-1].strip()
+
+    if line in {"init.py", "init__.py"}:
+        line = "__init__.py"
+
+    return line.strip()
 
 
 def _extract_code_block(text: str) -> str:
@@ -95,7 +92,9 @@ def _extract_code_block(text: str) -> str:
         return text
 
     blocks.sort(
-        key=lambda block: sum(any(marker in line for marker in _TREE_MARKERS) for line in block),
+        key=lambda block: sum(
+            any(marker in line for marker in _BRANCH_MARKERS) for line in block
+        ),
         reverse=True,
     )
     return "\n".join(blocks[0])
@@ -112,29 +111,37 @@ def _infer_directories(nodes: list[Node]) -> list[Node]:
 
 
 def parse_tree(text: str) -> list[Node]:
-    """Parse common AI-generated project trees into nodes."""
+    """Parse common AI-generated project trees into filesystem nodes."""
     text = _extract_code_block(text)
     nodes: list[Node] = []
 
     for raw in text.splitlines():
+        if not raw.strip():
+            continue
+
         stripped = raw.strip()
-        if not stripped or stripped in {"│", "|", "```"}:
+        if stripped in {"│", "|", "```"}:
             continue
 
         name = _clean_name(raw)
         if not name:
             continue
 
+        level = _branch_level(raw)
+        if level is None:
+            level = _indent_level(raw)
+
         is_dir = name.endswith(("/", "\\"))
         name = name.rstrip("/\\")
-        if not name or not _is_probable_tree_line(raw):
+        if not name:
             continue
 
-        nodes.append(Node(name=name, level=_level(raw), is_dir=is_dir))
+        nodes.append(Node(name=name, level=level, is_dir=is_dir))
 
-    # Root entries are represented at level 0; tree branches are one level below.
-    for index, node in enumerate(nodes):
-        if index == 0 and node.level > 0:
-            nodes[index] = Node(node.name, 0, node.is_dir)
+    # A pasted tree always starts with its root at level 0. Plain text without
+    # a root marker is also normalized relative to its first entry.
+    if nodes and nodes[0].level != 0:
+        offset = nodes[0].level
+        nodes = [Node(n.name, max(0, n.level - offset), n.is_dir) for n in nodes]
 
     return _infer_directories(nodes)
