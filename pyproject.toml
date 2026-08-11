@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auto-folder"
+version = "0.1.0"
+description = "Create folders and files from a pasted directory tree."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "vietanh926" }]
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+auto-folder = "auto_folder.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
