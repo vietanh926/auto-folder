@@ -17,12 +17,10 @@ OutputBaseFilename=auto-folder-setup
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
+ChangesEnvironment=yes
 
 [Files]
 Source: "..\dist\auto-folder.exe"; DestDir: "{app}"; Flags: ignoreversion
-
-[Icons]
-Name: "{autoprograms}\Auto-Folder"; Filename: "{app}\auto-folder.exe"
 
 [Code]
 procedure AddToUserPath(const Dir: string);
@@ -42,6 +40,35 @@ begin
   end;
 end;
 
+procedure RemoveFromUserPath(const Dir: string);
+var
+  CurrentPath: string;
+  NormalizedPath: string;
+  Entry: string;
+  ResultPath: string;
+  I: Integer;
+begin
+  if not RegQueryStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', CurrentPath) then
+    Exit;
+
+  ResultPath := '';
+  NormalizedPath := CurrentPath + ';';
+  while Pos(';', NormalizedPath) > 0 do
+  begin
+    I := Pos(';', NormalizedPath);
+    Entry := Copy(NormalizedPath, 1, I - 1);
+    Delete(NormalizedPath, 1, I);
+    if (Entry <> '') and (CompareText(Entry, Dir) <> 0) then
+    begin
+      if ResultPath <> '' then
+        ResultPath := ResultPath + ';';
+      ResultPath := ResultPath + Entry;
+    end;
+  end;
+
+  RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', ResultPath);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
@@ -49,19 +76,7 @@ begin
 end;
 
 procedure CurUninstallStepChanged(UninstallStep: TUninstallStep);
-var
-  CurrentPath: string;
-  Dir: string;
 begin
   if UninstallStep = usPostUninstall then
-  begin
-    Dir := ExpandConstant('{app}');
-    if RegQueryStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', CurrentPath) then
-    begin
-      StringChangeEx(CurrentPath, ';' + Dir, '', True);
-      StringChangeEx(CurrentPath, Dir + ';', '', True);
-      StringChangeEx(CurrentPath, Dir, '', True);
-      RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', CurrentPath);
-    end;
-  end;
+    RemoveFromUserPath(ExpandConstant('{app}'));
 end;
