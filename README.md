@@ -1,167 +1,192 @@
 # Auto-Folder
 
-**Turn an AI-generated project tree into real folders and files in seconds.**
+**Turn AI-generated project structures into real folders and files in seconds.**
 
-Auto-Folder lets you copy a project structure from ChatGPT, Claude, Gemini, documentation, or a text file and create it on your computer automatically.
+Auto-Folder is a lightweight, cross-platform command-line tool for developers who frequently copy project architectures from AI assistants, documentation, or technical designs.
 
-## 📥 Download
+Instead of manually creating dozens of directories and empty files, run `auto-folder`, paste the structure, review a preview, and Auto-Folder builds the project skeleton in the current directory.
 
-### Windows
+## Why Auto-Folder?
 
-1. Open the **Releases** page.
-2. Download:
+AI coding assistants are great at designing project structures, but turning this:
 
 ```text
-   auto-folder-setup.exe
+order-sync/
+├── app/
+│   ├── config.py
+│   ├── database.py
+│   └── services/
+│       └── sync_service.py
+├── tests/
+│   └── test_sync.py
+├── requirements.txt
+└── main.py
 ```
 
-3. Run the installer.
-4. Follow the installation steps.
-5. When installation is finished, you can close the installer.
+into actual folders and files is still repetitive manual work.
 
-> You do **not** need to install Python, Git, or any other programming tools.
+Auto-Folder is designed to make that workflow nearly instant:
 
-## 🚀 How to use
+```text
+auto-folder
+        ↓
+paste the structure
+        ↓
+press Enter on an empty line
+        ↓
+review the preview
+        ↓
+confirm
+        ↓
+project skeleton created
+```
 
-After installing Auto-Folder:
+## Design goals
 
-1. Open **Command Prompt (CMD)** or **PowerShell**.
-2. Go to the folder where you want to create your project.
-3. Run:
+- **Simple:** one command and paste.
+- **Fast:** no manual folder/file creation.
+- **Lightweight:** the end-user package contains only what is required to run Auto-Folder.
+- **AI-friendly:** handle common tree formats produced by AI assistants and Markdown.
+- **Safe:** preview before creation, never overwrite existing files by default, and reject unsafe paths.
+- **Portable:** run without requiring Python, pip, or development tools after installation.
+- **Cross-platform:** designed to support Windows, Linux, and macOS from the same core codebase.
+
+## Supported input
+
+Auto-Folder supports common structures such as:
+
+- Unicode trees using `├──`, `└──`, and `│`.
+- ASCII trees using `+--`, `\\--`, and `|`.
+- Folder names with or without a trailing `/` when the structure provides enough context.
+- Files without extensions such as `Dockerfile`, `Makefile`, and `LICENSE`.
+- Hidden files such as `.env`, `.gitignore`, and `.dockerignore`.
+- Comments after entries, such as `config.py # environment configuration`.
+- Common Markdown artifacts such as escaped underscores and formatting around names.
+- Nested folders and files.
+- Empty folders explicitly represented in the tree.
+- Markdown code blocks containing the directory tree.
+- `...` and `…` placeholders, which are ignored.
+
+## Example
+
+Run from the directory where the project should be created:
 
 ```text
 auto-folder
 ```
 
-4. Paste your project tree.
-5. Press **Enter on an empty line** when you finish pasting.
-6. Check the preview.
-7. Confirm with `Y` to create the structure.
-
-### Example
-
-Paste this:
+Then paste:
 
 ```text
-my-project/
+order-sync/
+│
 ├── app/
-│   ├── main.py
-│   └── config.py
+│   ├── __init__.py
+│   ├── config.py                 # Environment configuration
+│   ├── database.py               # Database connection
+│   └── api/
+│       ├── __init__.py
+│       └── routes.py
+│
 ├── tests/
-│   └── test_main.py
-├── data/
-└── README.md
+│   └── test_sync.py
+│
+├── .env
+├── requirements.txt
+└── main.py
 ```
 
-Auto-Folder will create:
+Press Enter on an empty line.
+
+Auto-Folder shows a preview such as:
 
 ```text
-my-project/
-├── app/
-│   ├── main.py
-│   └── config.py
-├── tests/
-│   └── test_main.py
-├── data/
-└── README.md
+Preview:
+[DIR ] order-sync/
+    [DIR ] app/
+        [FILE] __init__.py
+        [FILE] config.py
+        [FILE] database.py
+        [DIR ] api/
+            [FILE] __init__.py
+            [FILE] routes.py
+    [DIR ] tests/
+        [FILE] test_sync.py
+    [FILE] .env
+    [FILE] requirements.txt
+    [FILE] main.py
+
+5 folders, 8 files
+
+Create this structure? [Y/n]:
 ```
 
-## 🤖 Works with AI-generated trees
+Nothing is created until the user confirms.
 
-You can paste directory trees directly from AI assistants.
+## Safety
 
-For example:
+Auto-Folder validates the parsed structure before modifying the filesystem.
 
-```text
-pytorch-template/
-│
-├── train.py
-├── test.py
-├── config.json
-│
-├── base/
-│   ├── base_data_loader.py
-│   ├── base_model.py
-│   └── base_trainer.py
-│
-├── data_loader/
-│   └── data_loaders.py
-│
-├── model/
-│   ├── model.py
-│   ├── metric.py
-│   └── loss.py
-│
-└── utils/
-    ├── util.py
-    └── ...
-```
+It rejects unsafe or invalid paths, including:
 
-`...` and `…` are treated as placeholders and **will not create files or folders**.
+- Parent-directory traversal such as `../outside`.
+- Absolute or nested paths embedded inside a single tree entry.
+- Invalid Windows filename characters.
+- Windows reserved names such as `CON`, `PRN`, and `NUL`.
+- Invalid tree indentation.
 
-## ✨ What it supports
+Existing files are not overwritten by default.
 
-Auto-Folder understands common directory tree formats, including:
+## Development
 
-- Unicode trees: `├──`, `└──`, `│`
-- ASCII trees: `+--`, `\\--`, `|`
-- Markdown code blocks
-- Comments after filenames
-- Markdown formatting around filenames
-- Hidden files such as `.env` and `.gitignore`
-- Files without extensions such as `Dockerfile` and `LICENSE`
-- Nested folders and files
-- `...` and `…` placeholders
+Requires Python 3.10+ during development.
 
-## 🔒 Safe by default
-
-Before creating anything, Auto-Folder shows a preview and asks for confirmation.
-
-It also protects against unsafe paths and does not overwrite existing files by default.
-
-## 🗑️ Uninstall
-
-To remove Auto-Folder:
-
-**Windows Settings → Apps → Installed apps → Auto-Folder → Uninstall**
-
-The uninstaller also removes Auto-Folder's entry from your **User PATH**, so uninstalling does not leave an unnecessary PATH entry behind.
-
-## 🔄 Updating
-
-When a new version is released:
-
-1. Download the latest `auto-folder-setup.exe` from **Releases**.
-2. Run the installer.
-3. Install the new version.
-
-You do not need Python or Git.
-
-## 🖥️ Supported platforms
-
-Currently available:
-
-- ✅ Windows
-
-Planned:
-
-- Linux
-- macOS
-
-The core application is designed to be cross-platform, while packaging and installation are handled separately for each operating system.
-
-## 🛠️ For developers
-
-If you want to develop or build Auto-Folder from source, see the project files and GitHub Actions configuration in the repository.
-
-Development requires Python 3.10+.
-
-```bash
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -e .
 python -m pip install pytest
 python -m pytest -q
 ```
 
-## 📄 License
+Run locally:
+
+```text
+auto-folder
+```
+
+The project uses automated GitHub Actions tests on Windows to catch parser, validation, and filesystem regressions.
+
+## Packaging
+
+Auto-Folder is developed in Python, but Python is **not required for end users**.
+
+Windows releases are packaged as a standalone executable using PyInstaller:
+
+```text
+End user
+└── auto-folder.exe
+```
+
+Development-only files such as `tests/`, test dependencies, source files, virtual environments, caches, and build metadata are not included in the standalone executable.
+
+The goal is to keep the application small and simple while avoiding unnecessary runtime dependencies.
+
+## Cross-platform
+
+The core application is intentionally kept platform-independent so the same parser, validator, and creator can be reused across operating systems.
+
+The target release formats are:
+
+```text
+Auto-Folder
+├── Windows → auto-folder.exe
+├── Linux   → auto-folder
+└── macOS   → auto-folder
+```
+
+Platform-specific packaging and installation are kept separate from the core application.
+
+## License
 
 MIT
