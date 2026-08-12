@@ -50,18 +50,27 @@ end;
 
 function PathContainsAutoFolder(const Value: string): Boolean;
 var
-  Parts: TArrayOfString;
-  I: Integer;
+  StartPos: Integer;
+  EndPos: Integer;
   Entry: string;
+  AppPath: string;
 begin
   Result := False;
-  Parts := SplitString(Value, PathDelimiter);
-  for I := 0 to GetArrayLength(Parts) - 1 do begin
-    Entry := NormalizePathEntry(Parts[I]);
-    if CompareText(Entry, NormalizePathEntry(ExpandConstant('{app}'))) = 0 then begin
+  AppPath := NormalizePathEntry(ExpandConstant('{app}'));
+  StartPos := 1;
+
+  while StartPos <= Length(Value) do begin
+    EndPos := PosEx(PathDelimiter, Value, StartPos);
+    if EndPos = 0 then
+      EndPos := Length(Value) + 1;
+
+    Entry := NormalizePathEntry(Copy(Value, StartPos, EndPos - StartPos));
+    if (Entry <> '') and (CompareText(Entry, AppPath) = 0) then begin
       Result := True;
       Exit;
     end;
+
+    StartPos := EndPos + 1;
   end;
 end;
 
@@ -84,24 +93,30 @@ end;
 procedure RemoveFromUserPath;
 var
   CurrentPath: string;
-  Parts: TArrayOfString;
   ResultPath: string;
-  I: Integer;
+  StartPos: Integer;
+  EndPos: Integer;
   Entry: string;
   AppPath: string;
 begin
   CurrentPath := GetUserPath();
   AppPath := NormalizePathEntry(ExpandConstant('{app}'));
-  Parts := SplitString(CurrentPath, PathDelimiter);
   ResultPath := '';
+  StartPos := 1;
 
-  for I := 0 to GetArrayLength(Parts) - 1 do begin
-    Entry := NormalizePathEntry(Parts[I]);
+  while StartPos <= Length(CurrentPath) do begin
+    EndPos := PosEx(PathDelimiter, CurrentPath, StartPos);
+    if EndPos = 0 then
+      EndPos := Length(CurrentPath) + 1;
+
+    Entry := NormalizePathEntry(Copy(CurrentPath, StartPos, EndPos - StartPos));
     if (Entry <> '') and (CompareText(Entry, AppPath) <> 0) then begin
       if ResultPath <> '' then
         ResultPath := ResultPath + PathDelimiter;
       ResultPath := ResultPath + Entry;
     end;
+
+    StartPos := EndPos + 1;
   end;
 
   SetUserPath(ResultPath);
