@@ -48,6 +48,19 @@ begin
   Result := RemoveBackslashUnlessRoot(Trim(Value));
 end;
 
+function FindPathDelimiter(const Value: string; StartPos: Integer): Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := StartPos to Length(Value) do begin
+    if Value[I] = PathDelimiter then begin
+      Result := I;
+      Exit;
+    end;
+  end;
+end;
+
 function PathContainsAutoFolder(const Value: string): Boolean;
 var
   StartPos: Integer;
@@ -60,7 +73,7 @@ begin
   StartPos := 1;
 
   while StartPos <= Length(Value) do begin
-    EndPos := PosEx(PathDelimiter, Value, StartPos);
+    EndPos := FindPathDelimiter(Value, StartPos);
     if EndPos = 0 then
       EndPos := Length(Value) + 1;
 
@@ -105,7 +118,7 @@ begin
   StartPos := 1;
 
   while StartPos <= Length(CurrentPath) do begin
-    EndPos := PosEx(PathDelimiter, CurrentPath, StartPos);
+    EndPos := FindPathDelimiter(CurrentPath, StartPos);
     if EndPos = 0 then
       EndPos := Length(CurrentPath) + 1;
 
